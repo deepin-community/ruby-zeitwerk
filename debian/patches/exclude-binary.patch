@@ -1,0 +1,16 @@
+Description: Exclude binaries
+ This package serves libraries, not binaries.
+ This patch will remove binaries (bin/test).
+Author: Jongmin Kim <jmkim@pukyong.ac.kr>
+Forwarded: not-needed
+Last-Update: 2019-06-03
+--- ruby-zeitwerk-2.1.6.orig/bin/test
++++ /dev/null
+@@ -1,7 +0,0 @@
+-#!/bin/bash
+-
+-if [[ -z $1 ]]; then
+-    bundle exec rake
+-else
+-    bundle exec rake TEST="$1"
+-fi

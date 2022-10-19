@@ -1,0 +1,43 @@
+ruby-zeitwerk (2.4.2-1) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+  [ Cédric Boutillier ]
+  * [ci skip] Update team name
+  * [ci skip] Add .gitattributes to keep unwanted files out of the
+    source package
+
+  [ Utkarsh Gupta ]
+  * New upstream version 2.4.2
+  * Bump dh-compat and Standards-Version
+  * Add myself as an uploader instead
+
+ -- Utkarsh Gupta <utkarsh@debian.org>  Mon, 30 Nov 2020 00:22:05 +0530
+
+ruby-zeitwerk (2.2.2-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 2.2.2
+  * Bump Standards-Version to 4.5.0 (no changes needed)
+
+ -- Sruthi Chandran <srud@debian.org>  Wed, 05 Feb 2020 11:29:51 +0100
+
+ruby-zeitwerk (2.1.9-1) unstable; urgency=medium
+
+  [ Utkarsh Gupta ]
+  * Add salsa-ci.yml
+
+  [ Jongmin Kim ]
+  * New upstream version 2.1.9
+  * d/control: Bump the policy std-ver to 4.4.0 (no changes needed)
+  * debian: Bump the debhelper version to 12
+
+ -- Jongmin Kim <jmkim@pukyong.ac.kr>  Wed, 04 Sep 2019 21:25:17 +0900
+
+ruby-zeitwerk (2.1.6-1) unstable; urgency=medium
+
+  * Initial release (Closes: #929258)
+
+ -- Jongmin Kim <jmkim@pukyong.ac.kr>  Mon, 20 May 2019 09:53:39 +0900

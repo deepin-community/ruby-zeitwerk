@@ -1,0 +1,29 @@
+Source: ruby-zeitwerk
+Section: ruby
+Priority: optional
+Maintainer: Debian Ruby Team <pkg-ruby-extras-maintainers@lists.alioth.debian.org>
+Uploaders: Utkarsh Gupta <utkarsh@debian.org>
+Build-Depends: debhelper-compat (= 13),
+               gem2deb,
+               rake,
+               ruby-minitest,
+               ruby-minitest-focus,
+               ruby-minitest-reporters
+Standards-Version: 4.5.1
+Vcs-Git: https://salsa.debian.org/ruby-team/ruby-zeitwerk.git
+Vcs-Browser: https://salsa.debian.org/ruby-team/ruby-zeitwerk
+Homepage: https://github.com/fxn/zeitwerk
+Testsuite: autopkgtest-pkg-ruby
+XS-Ruby-Versions: all
+Rules-Requires-Root: no
+
+Package: ruby-zeitwerk
+Architecture: all
+XB-Ruby-Versions: ${ruby:Versions}
+Depends: ruby | ruby-interpreter,
+         ${misc:Depends}
+Description: Efficient and thread-safe constant autoloader
+ Zeitwerk implements constant autoloading with Ruby semantics. Each gem
+ and application may have their own independent autoloader, with its own
+ configuration, inflector, and logger. Supports autoloading, preloading,
+ reloading, and eager loading.
