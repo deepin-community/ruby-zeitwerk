@@ -1,0 +1,63 @@
+From: Lucas Kanashiro <kanashiro@ubuntu.com>
+Date: Tue, 27 Jun 2023 19:41:26 -0300
+Subject: Do not b-d on mintest-proveit and warning
+
+Forwarded: not-needed
+---
+ Gemfile             |  1 -
+ test/test_helper.rb | 22 ----------------------
+ 2 files changed, 23 deletions(-)
+
+diff --git a/Gemfile b/Gemfile
+index e4cb5cc..999c1bb 100644
+--- a/Gemfile
++++ b/Gemfile
+@@ -7,6 +7,5 @@ gemspec
+ gem "rake"
+ gem "minitest"
+ gem "minitest-focus"
+-gem "minitest-proveit"
+ gem "minitest-reporters"
+ gem "warning"
+diff --git a/test/test_helper.rb b/test/test_helper.rb
+index 4fdfe22..ead377e 100644
+--- a/test/test_helper.rb
++++ b/test/test_helper.rb
+@@ -2,31 +2,10 @@
+ 
+ require "minitest/autorun"
+ require "minitest/focus"
+-require "minitest/proveit"
+ 
+ require "minitest/reporters"
+ Minitest::Reporters.use!(Minitest::Reporters::DefaultReporter.new)
+ 
+-require "warning"
+-Warning.process do |msg|
+-  # This warning is issued by Zeitwerk itself, ignore it.
+-  if msg.include?("Zeitwerk defines the constant")
+-    :default
+-  # These ones are issued by the test "autovivification is synchronized" from
+-  # test_autovivification.rb, but only on Ruby 2.5. They can be ignored, the
+-  # test verifies the constant is set only once. I suspect this is related to
+-  # the internal representation of constants in CRuby and
+-  #
+-  #     https://github.com/ruby/ruby/commit/b74131132f8872d23e405c61ecfe18dece17292f
+-  #
+-  # fixed it, but have not verified it.
+-  elsif msg.include?("already initialized constant Admin::V2") || msg.include?("previous definition of V2 was here")
+-    :default
+-  else
+-    :raise
+-  end
+-end
+-
+ require_relative "support/test_macro"
+ require_relative "support/delete_loaded_feature"
+ require_relative "support/loader_test"
+@@ -41,5 +20,4 @@ Minitest::Test.class_eval do
+   include RemoveConst
+   include OnTeardown
+ 
+-  prove_it!
+ end

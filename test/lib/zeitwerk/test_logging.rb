@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class TestLogging < LoaderTest
@@ -67,7 +69,7 @@ class TestLogging < LoaderTest
     files = [["x.rb", "X = true"]]
     with_files(files) do
       with_load_path(".") do
-        assert_logged(/constant X loaded from file #{File.realpath("x.rb")}/) do
+        assert_logged(/constant X loaded from file #{File.expand_path("x.rb")}/) do
           loader.push_dir(".")
           loader.setup
 
@@ -81,7 +83,7 @@ class TestLogging < LoaderTest
     files = [["x.rb", "X = true"]]
     with_files(files) do
       with_load_path(".") do
-        assert_logged(/constant X loaded from file #{File.realpath("x.rb")}/) do
+        assert_logged(/constant X loaded from file #{File.expand_path("x.rb")}/) do
           loader.push_dir(".")
           loader.setup
 
@@ -95,7 +97,7 @@ class TestLogging < LoaderTest
     files = [["admin/user.rb", "class Admin::User; end"]]
     with_files(files) do
       with_load_path(".") do
-        assert_logged(/module Admin autovivified from directory #{File.realpath("admin")}/) do
+        assert_logged(/module Admin autovivified from directory #{File.expand_path("admin")}/) do
           loader.push_dir(".")
           loader.setup
 
@@ -105,12 +107,39 @@ class TestLogging < LoaderTest
     end
   end
 
+  test "logs implicit to explicit promotions" do
+    # We use two root directories to make sure the loader visits the implicit
+    # a/m first, and the explicit b/m.rb after it.
+    files = [
+      ["a/m/x.rb", "M::X = true"],
+      ["b/m.rb", "module M; end"]
+    ]
+    with_files(files) do
+      loader.push_dir("a")
+      loader.push_dir("b")
+      assert_logged(/earlier autoload for M discarded, it is actually an explicit namespace defined in #{File.expand_path("b/m.rb")}/) do
+        loader.setup
+      end
+    end
+  end
+
   test "logs autoload configured for files" do
     files = [["x.rb", "X = true"]]
     with_files(files) do
-      assert_logged("autoload set for X, to be loaded from #{File.realpath("x.rb")}") do
+      assert_logged("autoload set for X, to be loaded from #{File.expand_path("x.rb")}") do
         loader.push_dir(".")
         loader.setup
+      end
+    end
+  end
+
+  test "logs failed autoloads, provided the require call succeeded" do
+    files = [["x.rb", ""]]
+    with_files(files) do
+      assert_logged(/expected file #{File.expand_path("x.rb")} to define constant X, but didn't/) do
+        loader.push_dir(".")
+        loader.setup
+        assert_raises(Zeitwerk::NameError) { X }
       end
     end
   end
@@ -118,20 +147,8 @@ class TestLogging < LoaderTest
   test "logs autoload configured for directories" do
     files = [["admin/user.rb", "class Admin::User; end"]]
     with_files(files) do
-      assert_logged("autoload set for Admin, to be autovivified from #{File.realpath("admin")}") do
+      assert_logged("autoload set for Admin, to be autovivified from #{File.expand_path("admin")}") do
         loader.push_dir(".")
-        loader.setup
-      end
-    end
-  end
-
-  test "logs preloads" do
-    files = [["x.rb", "X = true"]]
-    with_files(files) do
-      loader.push_dir(".")
-      loader.preload("x.rb")
-
-      assert_logged(/preloading #{File.realpath("x.rb")}/) do
         loader.setup
       end
     end
@@ -170,6 +187,22 @@ class TestLogging < LoaderTest
       assert_logged(%r(file .*?/b/foo\.rb is ignored because .*?/a/foo\.rb has precedence)) do
         loader.push_dir("b")
         loader.setup
+      end
+    end
+  end
+
+  test "logs when eager loading starts" do
+    with_setup do
+      assert_logged(/eager load start/) do
+        loader.eager_load
+      end
+    end
+  end
+
+  test "logs when eager loading ends" do
+    with_setup do
+      assert_logged(/eager load end/) do
+        loader.eager_load
       end
     end
   end

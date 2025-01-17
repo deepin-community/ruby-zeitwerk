@@ -1,3 +1,36 @@
+ruby-zeitwerk (2.6.8-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release.
+  * Declare compliance with Debian Policy 4.6.2.
+  * d/p/0002-Do-not-b-d-on-mintest-proveit-and-warning.patch: avoid dependency
+    on minitest-proveit and warning to run tests.
+  * d/control: runtime depend on ${ruby:Depends} instead of ruby-interpreter.
+
+ -- Lucas Kanashiro <kanashiro@debian.org>  Tue, 27 Jun 2023 19:53:18 -0300
+
+ruby-zeitwerk (2.6.1-1) unstable; urgency=medium
+
+  * Team Upload.
+  * New upstream version 2.6.1 (Closes: #1019680)
+  * Bump Standards-Version to 4.6.1 (no changes needed)
+
+ -- Nilesh Patra <nilesh@debian.org>  Sat, 29 Oct 2022 21:59:15 +0530
+
+ruby-zeitwerk (2.4.2-2) unstable; urgency=medium
+
+  * Team Upload
+
+  [ Debian Janitor ]
+  * Apply multi-arch hints. + ruby-zeitwerk: Add :any qualifier for ruby
+    dependency.
+
+  [ Pirate Praveen ]
+  * Use gem-install layout (bundler needs this layout for --local option)
+  * Bump Standards-Version to 4.6.0 (no changes needed)
+
+ -- Pirate Praveen <praveen@debian.org>  Sat, 22 Jan 2022 18:22:01 +0530
+
 ruby-zeitwerk (2.4.2-1) unstable; urgency=medium
 
   [ Debian Janitor ]

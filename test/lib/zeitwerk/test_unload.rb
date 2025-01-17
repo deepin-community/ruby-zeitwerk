@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class TestUnload < LoaderTest
@@ -66,26 +68,26 @@ class TestUnload < LoaderTest
 
   test "unload clears internal caches" do
     files = [
-      ["app/user.rb", "class User; end"],
-      ["app/api/v1/users_controller.rb", "class Api::V1::UsersController; end"],
-      ["app/admin/root.rb", "class Admin::Root; end"],
-      ["lib/user.rb", "class User; end"]
+      ["rd1/user.rb", "class User; end"],
+      ["rd1/api/v1/users_controller.rb", "class Api::V1::UsersController; end"],
+      ["rd1/admin/root.rb", "class Admin::Root; end"],
+      ["rd2/user.rb", "class User; end"]
     ]
-    with_setup(files, dirs: %w(app lib)) do
+    with_setup(files) do
       assert User
       assert Api::V1::UsersController
 
-      assert !loader.autoloads.empty?
-      assert !loader.autoloaded_dirs.empty?
-      assert !loader.to_unload.empty?
-      assert !loader.lazy_subdirs.empty?
+      assert !loader.__autoloads.empty?
+      assert !loader.__autoloaded_dirs.empty?
+      assert !loader.__to_unload.empty?
+      assert !loader.__namespace_dirs.empty?
 
       loader.unload
 
-      assert loader.autoloads.empty?
-      assert loader.autoloaded_dirs.empty?
-      assert loader.to_unload.empty?
-      assert loader.lazy_subdirs.empty?
+      assert loader.__autoloads.empty?
+      assert loader.__autoloaded_dirs.empty?
+      assert loader.__to_unload.empty?
+      assert loader.__namespace_dirs.empty?
     end
   end
 
@@ -129,14 +131,58 @@ class TestUnload < LoaderTest
     ]
     with_files(files) do
       la = new_loader(dirs: "a")
-      assert Zeitwerk::ExplicitNamespace.cpaths["M"] == la
+      assert Zeitwerk::ExplicitNamespace.send(:cpaths)["M"] == la
 
       lb = new_loader(dirs: "b")
-      assert Zeitwerk::ExplicitNamespace.cpaths["X"] == lb
+      assert Zeitwerk::ExplicitNamespace.send(:cpaths)["X"] == lb
 
       la.unload
-      assert_nil Zeitwerk::ExplicitNamespace.cpaths["M"]
-      assert Zeitwerk::ExplicitNamespace.cpaths["X"] == lb
+      assert_nil Zeitwerk::ExplicitNamespace.send(:cpaths)["M"]
+      assert Zeitwerk::ExplicitNamespace.send(:cpaths)["X"] == lb
+    end
+  end
+
+  test "unload clears the set of shadowed files" do
+    files = [
+      ["a/m.rb", "module M; end"],
+      ["b/m.rb", "module M; end"],
+    ]
+    with_files(files) do
+      loader.push_dir("a")
+      loader.push_dir("b")
+      loader.setup
+
+      assert !loader.__shadowed_files.empty? # precondition
+      loader.unload
+      assert loader.__shadowed_files.empty?
+    end
+  end
+
+  test "unload clears state even if the autoload failed and the exception was rescued" do
+    on_teardown do
+      remove_const :X_IS_NOT_DEFINED
+    end
+
+    files = [["x.rb", "X_IS_NOT_DEFINED = true"]]
+    with_setup(files) do
+      begin
+        X
+      rescue Zeitwerk::NameError
+        pass # precondition holds
+      else
+        flunk # precondition failed
+      end
+
+      loader.unload
+
+      assert !Object.constants.include?(:X)
+      assert !required?(files)
+    end
+  end
+
+  test "raises if called before setup" do
+    assert_raises(Zeitwerk::SetupRequired) do
+      loader.unload
     end
   end
 end

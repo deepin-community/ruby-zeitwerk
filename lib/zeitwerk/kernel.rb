@@ -3,42 +3,46 @@
 module Kernel
   module_function
 
-  # We are going to decorate Kerner#require with two goals.
+  # Zeitwerk's main idea is to define autoloads for project constants, and then
+  # intercept them when triggered in this thin `Kernel#require` wrapper.
   #
-  # First, by intercepting Kernel#require calls, we are able to autovivify
-  # modules on required directories, and also do internal housekeeping when
-  # managed files are loaded.
+  # That allows us to complete the circle, invoke callbacks, autovivify modules,
+  # define autoloads for just autoloaded namespaces, update internal state, etc.
   #
   # On the other hand, if you publish a new version of a gem that is now managed
   # by Zeitwerk, client code can reference directly your classes and modules and
   # should not require anything. But if someone has legacy require calls around,
-  # they will work as expected, and in a compatible way.
+  # they will work as expected, and in a compatible way. This feature is by now
+  # EXPERIMENTAL and UNDOCUMENTED.
   #
   # We cannot decorate with prepend + super because Kernel has already been
   # included in Object, and changes in ancestors don't get propagated into
-  # already existing ancestor chains.
+  # already existing ancestor chains on Ruby < 3.0.
   alias_method :zeitwerk_original_require, :require
+  class << self
+    alias_method :zeitwerk_original_require, :require
+  end
 
   # @sig (String) -> true | false
   def require(path)
     if loader = Zeitwerk::Registry.loader_for(path)
       if path.end_with?(".rb")
-        zeitwerk_original_require(path).tap do |required|
-          loader.on_file_autoloaded(path) if required
-        end
+        required = zeitwerk_original_require(path)
+        loader.on_file_autoloaded(path) if required
+        required
       else
         loader.on_dir_autoloaded(path)
         true
       end
     else
-      zeitwerk_original_require(path).tap do |required|
-        if required
-          realpath = $LOADED_FEATURES.last
-          if loader = Zeitwerk::Registry.loader_for(realpath)
-            loader.on_file_autoloaded(realpath)
-          end
+      required = zeitwerk_original_require(path)
+      if required
+        abspath = $LOADED_FEATURES.last
+        if loader = Zeitwerk::Registry.loader_for(abspath)
+          loader.on_file_autoloaded(abspath)
         end
       end
+      required
     end
   end
 

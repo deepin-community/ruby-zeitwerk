@@ -1,22 +1,310 @@
 # CHANGELOG
 
+## 2.6.8 (28 April 2023)
+
+* The new `Zeitwerk::Loader.for_gem_extension` gives you a loader configured
+  according to the conventions of a [gem
+  extension](https://guides.rubygems.org/name-your-gem/).
+
+  Please check its
+  [documentation](https://github.com/fxn/zeitwerk#for_gem_extension) for further
+  details.
+
+## 2.6.7 (10 February 2023)
+
+* Reset module state on `Zeitwerk::NameError`.
+
+  If an autoload is triggered, the file is loaded successfully, but the expected
+  constant does not get defined, Ruby resets the state of the module. In
+  particular, `autoload?` returns `nil` for that constant name, and `constants`
+  does not include the constant name (starting with Ruby 3.1).
+
+  Zeitwerk is more strict, not defining the expected constant is an error
+  condition and the loader raises `Zeitwerk::NameError`. But this happens during
+  the `require` call and the exception prevents Ruby from doing that cleanup.
+
+  With this change, the parent module is left in a state that makes more sense
+  and is consistent with what Ruby does.
+
+* A message is logged if an autoload did not define the expected constant.
+
+  When that happens, `Zeitwerk::NameError` is raised and you normally see the
+  exception. But if the error is shallowed, and you are inspecting the logs to
+  investigate something, this new message may be helpful.
+
+* By default, `Zeitwerk::Loader#dirs` filters ignored root directories out.
+  Please, pass `ignored: true` if you want them included.
+
+  It is very strange to configure a root directory and also ignore it, the edge
+  case is supported only for completeness. However, in that case, client code
+  listing root directories rarely needs the ignored ones.
+
+* Documentation improvements.
+
+* Enforcement of private interfaces continues with another gradual patch.
+
+## 2.6.6 (8 November 2022)
+
+* The new `eager_load_namespace` had a bug when eager loading certain namespaces
+  with collapsed directories. This has been fixed.
+
+## 2.6.5 (6 November 2022)
+
+* Controlled errors in a couple of situations:
+
+  - Attempting to eager load or reload without previously invoking `setup` now
+    raises `Zeitwerk::SetupRequired`.
+
+  - The method `Zeitwerk::Loader#push_dir` raises `Zeitwerk::Error` if it gets
+    an anonymous custom namespace.
+
+  These should be backwards compatible, because they raise in circumstances that
+  didn't work anyway. The goal here is to provide a meaningful error upfront.
+
+* Enforcement of private interfaces continues with another gradual patch.
+
+## 2.6.4 (1 November 2022)
+
+Ruby does not have gem-level visibility, so sometimes you need things to be
+`public` for them to be accessible internally. But they do not belong to the
+public interface of the gem.
+
+A method that is undocumented and marked as `@private` in the source code is
+clearly private API, regardless of its formal Ruby visibility.
+
+This release starts a series of gradual patches in which private interface is
+enforced with stricter formal visibility.
+
+## 2.6.3 (31 October 2022)
+
+* `v2.6.2` introduced a regression in the logic that checks whether two loaders
+  want to manage the same root directories. It has been fixed.
+
+## 2.6.2 (31 October 2022)
+
+* `Zeitwerk::Loader#load_file` allows you to load an individual Ruby file. Check
+  its [documentation](https://github.com/fxn/zeitwerk#loading-individual-files)
+  for details.
+
+* `Zeitwerk::Loader#eager_load_dir` allows you to eager load a directory,
+  recursively. Check its
+  [documentation](https://github.com/fxn/zeitwerk#eager-load-directories) for
+  details.
+
+* `Zeitwerk::Loader#eager_load_namespace` allows you to eager a namespace,
+  recursively. Namespaces are global, this method loads only what the receiver
+  manages from that namespace, if anything. Check its
+  [documentation](https://github.com/fxn/zeitwerk#eager-load-namespaces) for
+  details.
+
+* `Zeitwerk::Loader.eager_load_namespace` broadcasts `eager_load_namespace` to
+  all registered loaders. Check its
+  [documentation](https://github.com/fxn/zeitwerk#eager-load-namespaces-shared-by-several-loaders)
+  for details.
+
+* Documents [shadowed files](https://github.com/fxn/zeitwerk#shadowed-files).
+  They always existed, but were not covered by the documentation.
+
+* Other assorted documentation improvements.
+
+## 2.6.1 (1 October 2022)
+
+* `Zeitwerk::Loader#dirs` allows you to instrospect the root directories
+  configured in the receiver. Please check its
+  [documentation](https://github.com/fxn/zeitwerk#introspection) for details.
+
+## 2.6.0 (13 June 2022)
+
+* Directories are processed in lexicographic order.
+
+  Different file systems may list directories in different order, and with this
+  change we ensure that client code eager loads consistently across platforms,
+  for example.
+
+* Before this release, subdirectories of root directories always represented
+  namespaces (unless ignored or collapsed). From now on, to be considered
+  namespaces they also have to contain at least one non-ignored Ruby file with
+  extension `.rb`, directly or recursively.
+
+  If you know beforehand a certain directory or directory pattern does not
+  represent a namespace, it is intentional and more efficient to tell Zeitwerk
+  to [ignore](https://github.com/fxn/zeitwerk#ignoring-parts-of-the-project) it.
+
+  However, if you don't do so and have a directory `tasks` that only contains
+  Rake files, arguably that directory is not meant to represent a Ruby module.
+  Before, Zeitwerk would define a top-level `Tasks` module after it; now, it
+  does not.
+
+  This feature is also handy for projects that have directories with auxiliary
+  resources mixed in the project tree in a way that is too dynamic for an ignore
+  pattern to be practical. See https://github.com/fxn/zeitwerk/issues/216.
+
+  In the unlikely case that an existing project has an empty directory for the
+  sole purpose of defining a totally empty module (no code, and no nested
+  classes or modules), such module has now to be defined in a file.
+
+  Directories are scanned again on reloads.
+
+* On setup, loaders created with `Zeitwerk::Loader.for_gem` issue warnings if
+  `lib` has extra, non-ignored Ruby files or directories.
+
+  This is motivated by existing gems with directories under `lib` that are not
+  meant to define Ruby modules, like directories for Rails generators, for
+  instance.
+
+  This warning can be silenced in the unlikely case that the extra stuff is
+  actually autoloadable and has to be managed by Zeitwerk.
+
+  Please, check the [documentation](https://github.com/fxn/zeitwerk#for_gem) for
+  further details.
+
+  This method returns an instance of a private subclass of `Zeitwerk::Loader`
+  now, but you cannot rely on the type, just on the interface.
+
+## 2.5.4 (28 January 2022)
+
+* If a file did not define the expected constant, there was a reload, and there were `on_unload` callbacks, Zeitwerk still tried to access the constant during reload, which raised. This has been corrected.
+
+## 2.5.3 (30 December 2021)
+
+* The change introduced in 2.5.2 implied a performance regression that was particularly dramatic in Ruby 3.1. We'll address [#198](https://github.com/fxn/zeitwerk/issues/198) in a different way.
+
+## 2.5.2 (27 December 2021)
+
+* When `Module#autoload` triggers the autovivification of an implicit namespace, `$LOADED_FEATURES` now gets the correspoding directory pushed. This is just a tweak to Zeitwerk's `Kernel#require` decoration. That way it acts more like the original, and cooperates better with other potential `Kernel#require` wrappers, like Bootsnap's.
+
+## 2.5.1 (20 October 2021)
+
+* Restores support for namespaces that are not hashable. For example namespaces that override the `hash` method with a different arity as shown in [#188](https://github.com/fxn/zeitwerk/issues/188).
+
+## 2.5.0 (20 October 2021)
+
+### Breaking changes
+
+* Requires Ruby 2.5.
+
+* Deletes the long time deprecated preload API. Instead of:
+
+  ```ruby
+  loader.preload("app/models/user.rb")
+  ```
+
+  just reference the constant on setup:
+
+  ```ruby
+  loader.on_setup { User }
+  ```
+
+  If you want to eager load a namespace, use the constants API:
+
+  ```ruby
+  loader.on_setup do
+    Admin.constants(false).each { |cname| Admin.const_get(cname) }
+  end
+  ```
+
+### Bug fixes
+
+* Fixes a bug in which a certain valid combination of overlapping trees managed by different loaders and ignored directories was mistakenly reported as having conflicting directories.
+
+* Detects external namespaces defined with `Module#autoload`. If your project reopens a 3rd party namespace, Zeitwerk already detected it and did not consider the namespace to be managed by the loader (automatically descends, ignored for reloads, etc.). However, the loader did not do that if the namespace had only an autoload in the 3rd party code yet to be executed. Now it does.
+
+### Callbacks
+
+* Implements `Zeitwerk::Loader#on_setup`, which allows you to configure blocks of code to be executed on setup and on each reload. When the callback is fired, the loader is ready, you can refer to project constants in the block.
+
+  See the [documentation](https://github.com/fxn/zeitwerk#the-on_setup-callback) for further details.
+
+* There is a new catch-all `Zeitwerk::Loader#on_load` that takes no argument and is triggered for all loaded objects:
+
+  ```ruby
+  loader.on_load do |cpath, value, abspath|
+    # ...
+  end
+  ```
+
+  Please, remember that if you want to trace the activity of a loader, `Zeitwerk::Loader#log!` logs plenty of information.
+
+  See the [documentation](https://github.com/fxn/zeitwerk#the-on_load-callback) for further details.
+
+* The block of the existing `Zeitwerk::Loader#on_load` receives also the value stored in the constant, and the absolute path to its corresponding file or directory:
+
+  ```ruby
+  loader.on_load("Service::NotificationsGateway") do |klass, abspath|
+    # ...
+  end
+  ```
+
+  Remember that blocks can be defined to take less arguments than passed. So this change is backwards compatible. If you had
+
+  ```ruby
+  loader.on_load("Service::NotificationsGateway") do
+    Service::NotificationsGateway.endpoint = ...
+  end
+  ```
+
+  That works.
+
+* Implements `Zeitwerk::Loader#on_unload`, which allows you to configure blocks of code to be executed before a certain class or module gets unloaded:
+
+  ```ruby
+  loader.on_unload("Country") do |klass, _abspath|
+    klass.clear_cache
+  end
+  ```
+
+  These callbacks are invoked during unloading, which happens in an unspecified order. Therefore, they should not refer to reloadable constants.
+
+  You can also be called for all unloaded objects:
+
+  ```ruby
+  loader.on_unload do |cpath, value, abspath|
+    # ...
+  end
+  ```
+
+  Please, remember that if you want to trace the activity of a loader, `Zeitwerk::Loader#log!` logs plenty of information.
+
+  See the [documentation](https://github.com/fxn/zeitwerk/blob/master/README.md#the-on_unload-callback) for further details.
+
+### Assorted
+
+* Performance improvements.
+
+* Documentation improvements.
+
+* The method `Zeitwerk::Loader#eager_load` accepts a `force` flag:
+
+  ```ruby
+  loader.eager_load(force: true)
+  ```
+
+  If passed, eager load exclusions configured with `do_not_eager_load` are not honoured (but ignored files and directories are).
+
+  This may be handy for test suites that eager load in order to ensure all files define the expected constant.
+
+* Eliminates internal use of `File.realpath`. One visible consequence is that  in logs root dirs are shown as configured if they contain symlinks.
+
+* When an autoloaded file does not define the expected constant, Ruby clears state differently starting with Ruby 3.1. Unloading has been revised to be compatible with both behaviours.
+
+* Logging prints a few new traces.
+
 ## 2.4.2 (27 November 2020)
 
 * Implements `Zeitwerk::Loader#on_load`, which allows you to configure blocks of code to be executed after a certain class or module have been loaded:
 
-      ```ruby
-      # config/environments/development.rb
-      loader.on_load("SomeApiClient") do
-        SomeApiClient.endpoint = "https://api.dev"
-      end
+  ```ruby
+  # config/environments/development.rb
+  loader.on_load("SomeApiClient") do
+    SomeApiClient.endpoint = "https://api.dev"
 
-      # config/environments/production.rb
-      loader.on_load("SomeApiClient") do
-        SomeApiClient.endpoint = "https://api.prod"
-      end
-      ```
+  # config/environments/production.rb
+  loader.on_load("SomeApiClient") do
+    SomeApiClient.endpoint = "https://api.prod"
+  end
+  ```
 
-      See the [documentation](https://github.com/fxn/zeitwerk/blob/master/README.md#the-on_load-callback) for further details.
+  See the [documentation](https://github.com/fxn/zeitwerk/blob/master/README.md#the-on_load-callback) for further details.
 
 ## 2.4.1 (29 October 2020)
 

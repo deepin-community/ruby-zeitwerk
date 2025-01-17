@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class TestConflictingDirectory < LoaderTest
@@ -58,10 +60,32 @@ class TestConflictingDirectory < LoaderTest
     assert loader.push_dir(dir)
   end
 
+  test "does not raise if a second existing loader ignores the directory (dir)" do
+    # Ensure this loader is loaded
+    existing_loader
+    second_existing_loader = new_loader(setup: false)
+    second_existing_loader.push_dir(parent)
+    second_existing_loader.ignore(dir)
+
+    assert loader.push_dir(dir)
+  end
+
   test "does not raise if an existing loader ignores the directory (glob pattern)" do
     existing_loader.push_dir(parent)
     existing_loader.ignore("#{parent}/*")
     assert loader.push_dir(dir)
+  end
+
+  test "does not raise if the loader ignores a directory managed by an existing loader (dir)" do
+    existing_loader.push_dir(dir)
+    loader.ignore(dir)
+    assert loader.push_dir(parent)
+  end
+
+  test "does not raise if the loader ignores a directory managed by an existing loader (glob pattern)" do
+    existing_loader.push_dir(dir)
+    loader.ignore("#{parent}/*")
+    assert loader.push_dir(parent)
   end
 
   test "raises if an existing loader ignores a directory with a matching prefix" do

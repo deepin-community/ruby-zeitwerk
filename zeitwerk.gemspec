@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "lib/zeitwerk/version"
 
 Gem::Specification.new do |spec|
@@ -23,5 +25,5 @@ Gem::Specification.new do |spec|
     "bug_tracker_uri" => "https://github.com/fxn/zeitwerk/issues"
   }
 
-  spec.required_ruby_version = ">= 2.4.4"
+  spec.required_ruby_version = ">= 2.5"
 end
