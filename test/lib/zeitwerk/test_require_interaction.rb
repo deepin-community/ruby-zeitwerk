@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "pathname"
 
@@ -76,11 +78,10 @@ class TestRequireInteraction < LoaderTest
 
   test "require autovivifies as needed" do
     files = [
-      ["app/models/admin/user.rb", "class Admin::User; end"],
-      ["app/controllers/admin/users_controller.rb", "class Admin::UsersController; end"]
+      ["rd1/admin/user.rb", "class Admin::User; end"],
+      ["rd2/admin/users_controller.rb", "class Admin::UsersController; end"]
     ]
-    dirs = %w(app/models app/controllers)
-    with_setup(files, dirs: dirs, load_path: dirs) do
+    with_setup(files, load_path: %w(rd1 rd2)) do
       assert_required "admin/user"
 
       assert Admin::User
@@ -205,39 +206,6 @@ class TestRequireInteraction < LoaderTest
           end
         end
         assert_match %r/Hotel/, e.message
-      end
-    end
-  end
-
-  test "symlinks in autoloaded files set by Zeitwerk" do
-    files = [["real/app/models/user.rb", "class User; end"]]
-    with_files(files) do
-      FileUtils.ln_s("real", "symlink")
-      loader.push_dir("symlink/app/models")
-      loader.setup
-
-      with_load_path("symlink/app/models") do
-        assert User
-        assert_not_required "user"
-
-        loader.reload
-
-        assert_required "user"
-      end
-    end
-  end
-
-  test "symlinks in autoloaded files resolved by Ruby" do
-    files = [["real/app/models/user.rb", "class User; end"]]
-    with_files(files) do
-      FileUtils.ln_s("real", "symlink")
-      loader.push_dir("symlink/app/models")
-      loader.setup
-
-      with_load_path("symlink/app/models") do
-        assert_required "user"
-        loader.reload
-        assert_required "user"
       end
     end
   end

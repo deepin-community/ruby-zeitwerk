@@ -1,8 +1,18 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "fileutils"
 
 class TestReloading < LoaderTest
   module Namespace; end
+
+  def silence_exceptions_in_threads
+    original_report_on_exception = Thread.report_on_exception
+    Thread.report_on_exception = false
+    yield
+  ensure
+    Thread.report_on_exception = original_report_on_exception
+  end
 
   test "enabling reloading after setup raises" do
     e = assert_raises(Zeitwerk::Error) do
@@ -117,14 +127,14 @@ class TestReloading < LoaderTest
     with_files(files) do
       loader = new_loader(dirs: ".", enable_reloading: false)
 
-      assert !loader.autoloads.empty?
+      assert !loader.__autoloads.empty?
 
       assert_equal 1, X
       assert_equal 1, Y::A
       assert_equal 1, Z::A
 
-      assert loader.autoloads.empty?
-      assert loader.to_unload.empty?
+      assert loader.__autoloads.empty?
+      assert loader.__to_unload.empty?
     end
   end
 
@@ -150,24 +160,24 @@ class TestReloading < LoaderTest
     with_files(files) do
       loader = new_loader(dirs: ".", enable_reloading: false)
 
-      assert !loader.autoloads.empty?
+      assert !loader.__autoloads.empty?
       assert !Zeitwerk::Registry.autoloads.empty?
 
       loader.eager_load
 
-      assert loader.autoloads.empty?
+      assert loader.__autoloads.empty?
       assert Zeitwerk::Registry.autoloads.empty?
-      assert loader.to_unload.empty?
+      assert loader.__to_unload.empty?
     end
   end
 
   test "reloading supports deleted root directories" do
-    files = [["a/x.rb", "X = 1"], ["b/y.rb", "Y = 1"]]
-    with_setup(files, dirs: %w(a b)) do
+    files = [["rd1/x.rb", "X = 1"], ["rd2/y.rb", "Y = 1"]]
+    with_setup(files) do
       assert X
       assert Y
 
-      FileUtils.rm_rf("b")
+      FileUtils.rm_rf("rd2")
       loader.reload
 
       assert X
@@ -185,6 +195,57 @@ class TestReloading < LoaderTest
 
       loader.eager_load
       assert_equal 2, $test_eager_load_after_reload
+    end
+  end
+
+  test "reload recovers from name errors (w/o on_unload callbacks)" do
+    on_teardown { remove_const :Y }
+
+    files = [["x.rb", "Y = :typo"]]
+    with_setup(files) do
+      assert_raises(Zeitwerk::NameError) { X }
+
+      assert !Object.constants.include?(:X)
+      assert !Object.const_defined?(:X, false)
+      assert !Object.autoload?(:X)
+
+      loader.reload
+      File.write("x.rb", "X = true")
+
+      assert Object.constants.include?(:X)
+      assert Object.const_defined?(:X, false)
+      assert Object.autoload?(:X)
+
+      assert X
+    end
+  end
+
+  test "reload recovers from name errors (w/ on_unload callbacks)" do
+    on_teardown { remove_const :Y }
+
+    files = [["x.rb", "Y = :typo"]]
+    with_setup(files) do
+      loader.on_unload {}
+      assert_raises(Zeitwerk::NameError) { X }
+
+      assert !Object.constants.include?(:X)
+      assert !Object.const_defined?(:X, false)
+      assert !Object.autoload?(:X)
+
+      loader.reload
+      File.write("x.rb", "X = true")
+
+      assert Object.constants.include?(:X)
+      assert Object.const_defined?(:X, false)
+      assert Object.autoload?(:X)
+
+      assert X
+    end
+  end
+
+  test "raises if called before setup" do
+    assert_raises(Zeitwerk::SetupRequired) do
+      loader.reload
     end
   end
 end

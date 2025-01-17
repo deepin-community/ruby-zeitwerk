@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class TestCallbacks < LoaderTest
@@ -5,7 +7,7 @@ class TestCallbacks < LoaderTest
 
   test "autoloading a file triggers on_file_autoloaded (Object)" do
     def loader.on_file_autoloaded(file)
-      if file == File.realpath("x.rb")
+      if file == File.expand_path("x.rb")
         $on_file_autoloaded_called = true
       end
       super
@@ -21,7 +23,7 @@ class TestCallbacks < LoaderTest
 
   test "autoloading a file triggers on_file_autoloaded (Namespace)" do
     def loader.on_file_autoloaded(file)
-      if file == File.realpath("x.rb")
+      if file == File.expand_path("x.rb")
         $on_file_autoloaded_called = true
       end
       super
@@ -37,7 +39,7 @@ class TestCallbacks < LoaderTest
 
   test "requiring an autoloadable file triggers on_file_autoloaded (Object)" do
     def loader.on_file_autoloaded(file)
-      if file == File.realpath("y.rb")
+      if file == File.expand_path("y.rb")
         $on_file_autoloaded_called = true
       end
       super
@@ -57,7 +59,7 @@ class TestCallbacks < LoaderTest
 
   test "requiring an autoloadable file triggers on_file_autoloaded (Namespace)" do
     def loader.on_file_autoloaded(file)
-      if file == File.realpath("y.rb")
+      if file == File.expand_path("y.rb")
         $on_file_autoloaded_called = true
       end
       super
@@ -77,7 +79,7 @@ class TestCallbacks < LoaderTest
 
   test "autoloading a directory triggers on_dir_autoloaded (Object)" do
     def loader.on_dir_autoloaded(dir)
-      if dir == File.realpath("m")
+      if dir == File.expand_path("m")
         $on_dir_autoloaded_called = true
       end
       super
@@ -93,7 +95,7 @@ class TestCallbacks < LoaderTest
 
   test "autoloading a directory triggers on_dir_autoloaded (Namespace)" do
     def loader.on_dir_autoloaded(dir)
-      if dir == File.realpath("m")
+      if dir == File.expand_path("m")
         $on_dir_autoloaded_called = true
       end
       super

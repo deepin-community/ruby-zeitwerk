@@ -55,6 +55,71 @@ class TestOnLoad < LoaderTest
     end
   end
 
+  test "on_load gets the expected arguments passed" do
+    with_setup([["x.rb", "X = 1"]]) do
+      args = []; loader.on_load("X") { |*a| args = a }
+
+      assert X
+      assert_equal 1, args[0]
+      assert_abspath "x.rb", args[1]
+    end
+  end
+
+  test "on_load for :ANY is called for files with the expected arguments" do
+    with_setup([["x.rb", "X = 1"]]) do
+      args = []; loader.on_load { |*a| args = a }
+
+      assert X
+      assert_equal "X", args[0]
+      assert_equal 1, args[1]
+      assert_abspath "x.rb", args[2]
+    end
+  end
+
+  test "on_load for :ANY is called for autovivified modules with the expected arguments" do
+    with_setup([["x/a.rb", "X::A = 1"]]) do
+      args = []; loader.on_load { |*a| args = a }
+
+      assert X
+      assert_equal "X", args[0]
+      assert_equal X, args[1]
+      assert_abspath "x", args[2]
+    end
+  end
+
+  test "on_load for :ANY is called for namespaced constants with the expected arguments" do
+    with_setup([["x/a.rb", "X::A = 1"]]) do
+      args = []; loader.on_load { |*a| args = a }
+
+      assert X::A
+      assert_equal "X::A", args[0]
+      assert_equal X::A, args[1]
+      assert_abspath "x/a.rb", args[2]
+    end
+  end
+
+  test "multiple on_load for :ANY are called in order" do
+    with_setup([["x.rb", "X = 1"]]) do
+      x = []
+      loader.on_load { x << 1 }
+      loader.on_load { x << 2 }
+
+      assert X
+      assert_equal [1, 2], x
+    end
+  end
+
+  test "if there are specific and :ANY on_loads, the specific one runs first" do
+    with_setup([["x.rb", "X = 1"]]) do
+      x = []
+      loader.on_load { x << 2 }
+      loader.on_load("X") { x << 1 }
+
+      assert X
+      assert_equal [1, 2], x
+    end
+  end
+
   test "on_load survives reloads" do
     with_setup([["a.rb", "class A; end"]]) do
       x = 0; loader.on_load("A") { x += 1 }
@@ -69,6 +134,46 @@ class TestOnLoad < LoaderTest
     end
   end
 
+  test "on_load for namespaces gets called with child constants available (implicit)" do
+    with_setup([["x/a.rb", "X::A = 1"]]) do
+      ok = false
+      loader.on_load("X") { ok = X.const_defined?(:A) }
+
+      assert X
+      assert ok
+    end
+  end
+
+  test "on_load for namespaces gets called with child constants available (explicit)" do
+    with_setup([["x.rb", "module X; end"], ["x/a.rb", "X::A = 1"]]) do
+      ok = false
+      loader.on_load("X") { ok = X.const_defined?(:A) }
+
+      assert X
+      assert ok
+    end
+  end
+
+  test "on_load :ANY for namespaces gets called with child constants available (implicit)" do
+    with_setup([["x/a.rb", "X::A = 1"]]) do
+      ok = false
+      loader.on_load { |cpath| ok = X.const_defined?(:A) if cpath == "X" }
+
+      assert X
+      assert ok
+    end
+  end
+
+  test "on_load :ANY for namespaces gets called with child constants available (explicit)" do
+    with_setup([["x.rb", "module X; end"], ["x/a.rb", "X::A = 1"]]) do
+      ok = false
+      loader.on_load { |cpath| ok = X.const_defined?(:A) if cpath == "X" }
+
+      assert X
+      assert ok
+    end
+  end
+
   test "if reloading is disabled, we deplete the hash (performance test)" do
     on_teardown do
       remove_const :A
@@ -80,10 +185,10 @@ class TestOnLoad < LoaderTest
       x = 0; loader.on_load("A") { x = 1 }
       loader.setup
 
-      assert !loader.on_load_callbacks.empty?
+      assert !loader.send(:on_load_callbacks).empty?
       assert A
       assert_equal 1, x
-      assert loader.on_load_callbacks.empty?
+      assert loader.send(:on_load_callbacks).empty?
     end
   end
 end
